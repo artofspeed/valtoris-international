@@ -27,6 +27,8 @@ dist-ssr
 e2e-diff-report.json
 playwright-report/
 test-results/
+compare-report.json
+compare-screens/
 
 # Raw wget mirror (used only during initial clone)
 mirror/

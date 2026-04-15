@@ -12,82 +12,82 @@ export const headLinks: { rel?: string; href: string; type?: string; media?: str
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/plugins/contact-form-7/includes/css/styles.css%3Fver=6.1.5.css",
+    "href": "/wp-content/plugins/contact-form-7/includes/css/styles.css",
     "media": "all"
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/plugins/boskery-addon/assets/vendors/animate/animate.min.css%3Fver=1744388882.css",
+    "href": "/wp-content/plugins/boskery-addon/assets/vendors/animate/animate.min.css",
     "media": "all"
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/plugins/boskery-addon/assets/vendors/animate/custom-animate.css%3Fver=1744388882.css",
+    "href": "/wp-content/plugins/boskery-addon/assets/vendors/animate/custom-animate.css",
     "media": "all"
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/plugins/boskery-addon/assets/vendors/bootstrap-select/css/bootstrap-select.min.css%3Fver=1744388882.css",
+    "href": "/wp-content/plugins/boskery-addon/assets/vendors/bootstrap-select/css/bootstrap-select.min.css",
     "media": "all"
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/plugins/boskery-addon/assets/vendors/bxslider/jquery.bxslider.css%3Fver=1744388882.css",
+    "href": "/wp-content/plugins/boskery-addon/assets/vendors/bxslider/jquery.bxslider.css",
     "media": "all"
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/plugins/boskery-addon/assets/vendors/jarallax/jarallax.css%3Fver=1744388882.css",
+    "href": "/wp-content/plugins/boskery-addon/assets/vendors/jarallax/jarallax.css",
     "media": "all"
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/plugins/boskery-addon/assets/vendors/jquery-magnific-popup/jquery.magnific-popup.css%3Fver=1744388883.css",
+    "href": "/wp-content/plugins/boskery-addon/assets/vendors/jquery-magnific-popup/jquery.magnific-popup.css",
     "media": "all"
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/plugins/boskery-addon/assets/vendors/odometer/odometer.min.css%3Fver=1744388882.css",
+    "href": "/wp-content/plugins/boskery-addon/assets/vendors/odometer/odometer.min.css",
     "media": "all"
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/plugins/boskery-addon/assets/vendors/owl-carousel/owl.carousel.min.css%3Fver=1744388883.css",
+    "href": "/wp-content/plugins/boskery-addon/assets/vendors/owl-carousel/owl.carousel.min.css",
     "media": "all"
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/plugins/boskery-addon/assets/vendors/owl-carousel/owl.theme.default.min.css%3Fver=1744388883.css",
+    "href": "/wp-content/plugins/boskery-addon/assets/vendors/owl-carousel/owl.theme.default.min.css",
     "media": "all"
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/plugins/boskery-addon/assets/vendors/reey-font/stylesheet.css%3Fver=1744388882.css",
+    "href": "/wp-content/plugins/boskery-addon/assets/vendors/reey-font/stylesheet.css",
     "media": "all"
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/plugins/boskery-addon/assets/vendors/alagambe-font/stylesheet.css%3Fver=1744388882.css",
+    "href": "/wp-content/plugins/boskery-addon/assets/vendors/alagambe-font/stylesheet.css",
     "media": "all"
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/plugins/elementor/assets/lib/swiper/v8/css/swiper.min.css%3Fver=8.4.5.css",
+    "href": "/wp-content/plugins/elementor/assets/lib/swiper/v8/css/swiper.min.css",
     "media": "all"
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/plugins/boskery-addon/assets/vendors/timepicker/timePicker.css%3Fver=1744388882.css",
+    "href": "/wp-content/plugins/boskery-addon/assets/vendors/timepicker/timePicker.css",
     "media": "all"
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/plugins/boskery-addon/assets/vendors/jquery-ui/jquery-ui.css%3Fver=1744388883.css",
+    "href": "/wp-content/plugins/boskery-addon/assets/vendors/jquery-ui/jquery-ui.css",
     "media": "all"
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/plugins/boskery-addon/assets/css/boskery-addon.css%3Fver=1744388883.css",
+    "href": "/wp-content/plugins/boskery-addon/assets/css/boskery-addon.css",
     "media": "all"
   },
   {
@@ -97,57 +97,57 @@ export const headLinks: { rel?: string; href: string; type?: string; media?: str
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/themes/boskery/assets/vendors/flaticons/css/flaticon.css%3Fver=1.1.css",
+    "href": "/wp-content/themes/boskery/assets/vendors/flaticons/css/flaticon.css",
     "media": "all"
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/themes/boskery/assets/vendors/boskery-icons/style.css%3Fver=1.1.css",
+    "href": "/wp-content/themes/boskery/assets/vendors/boskery-icons/style.css",
     "media": "all"
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/themes/boskery/assets/vendors/bootstrap/css/bootstrap.min.css%3Fver=5.0.0.css",
+    "href": "/wp-content/themes/boskery/assets/vendors/bootstrap/css/bootstrap.min.css",
     "media": "all"
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/themes/boskery/assets/vendors/fontawesome/css/all.min.css%3Fver=5.15.1.css",
+    "href": "/wp-content/themes/boskery/assets/vendors/fontawesome/css/all.min.css",
     "media": "all"
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/themes/boskery/style.css%3Fver=1776209421.css",
+    "href": "/wp-content/themes/boskery/style.css",
     "media": "all"
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/plugins/elementor/assets/css/frontend.min.css%3Fver=4.0.1.css",
+    "href": "/wp-content/plugins/elementor/assets/css/frontend.min.css",
     "media": "all"
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/uploads/elementor/css/post-8.css%3Fver=1775118811.css",
+    "href": "/wp-content/uploads/elementor/css/post-8.css",
     "media": "all"
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/uploads/elementor/css/post-177.css%3Fver=1775151433.css",
+    "href": "/wp-content/uploads/elementor/css/post-177.css",
     "media": "all"
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/uploads/elementor/google-fonts/css/roboto.css%3Fver=1744389528.css",
+    "href": "/wp-content/uploads/elementor/google-fonts/css/roboto.css",
     "media": "all"
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/uploads/elementor/google-fonts/css/robotoslab.css%3Fver=1744389547.css",
+    "href": "/wp-content/uploads/elementor/google-fonts/css/robotoslab.css",
     "media": "all"
   },
   {
     "rel": "stylesheet",
-    "href": "/wp-content/plugins/boskery-addon/assets/vendors/boskery-icons/style.css%3Fver=1.1.css",
+    "href": "/wp-content/plugins/boskery-addon/assets/vendors/boskery-icons/style.css",
     "media": "all"
   },
   {
@@ -1076,8 +1076,8 @@ As a professional trading company, we are a verified product exporter focused on
 
 
 			
-			<link rel="stylesheet" id="elementor-post-271-css" href="/wp-content/uploads/elementor/css/post-271.css%3Fver=1775118811.css" media="all">
-<link rel="stylesheet" id="elementor-post-3175-css" href="/wp-content/uploads/elementor/css/post-3175.css%3Fver=1775118811.css" media="all">
+			<link rel="stylesheet" id="elementor-post-271-css" href="/wp-content/uploads/elementor/css/post-271.css" media="all">
+<link rel="stylesheet" id="elementor-post-3175-css" href="/wp-content/uploads/elementor/css/post-3175.css" media="all">
 
 
 
