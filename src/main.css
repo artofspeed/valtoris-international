@@ -1,0 +1,2 @@
+/* Intentionally minimal. Each page injects its own CSS via StaticPage. */
+html, body, #root { margin: 0; padding: 0; }
