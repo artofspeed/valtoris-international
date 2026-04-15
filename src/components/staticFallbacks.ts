@@ -285,25 +285,230 @@ function applyStickyHeaderClone(root: HTMLElement): (() => void) | undefined {
   if (!source) return undefined;
   // Avoid double-cloning if the DOM already has a cloned header (hot-reload).
   if (source.parentElement?.querySelector('.sticky-header--cloned')) return undefined;
+  // Orig's sticky-nav plugin inserts a fixed-position clone of the header
+  // that's permanently transformed off-screen via `translateY(-105px)` —
+  // it only becomes visible if the plugin adds `.active` (which on the live
+  // site it actually never does, because the activation threshold is never
+  // met). Mirror the DOM exactly so page-height math matches, but DO NOT
+  // toggle `.active` on scroll: the theme's `transition: all` on the source
+  // header would otherwise create a visible "flash / dark-shadow" glitch
+  // every time the user scrolled past the threshold.
   const clone = source.cloneNode(true) as HTMLElement;
   clone.classList.add('sticky-header--cloned');
-  // Stale WordPress IDs inside the clone would otherwise duplicate ids on
-  // the page (`menu-main-menu-new` for instance). Strip them.
   clone.removeAttribute('id');
   clone.querySelectorAll('[id]').forEach((el) => el.removeAttribute('id'));
+  // Defensively disable transitions on the clone so any residual hover or
+  // state change can't produce the flash. The clone is off-screen anyway.
+  clone.style.transition = 'none';
   source.insertAdjacentElement('afterend', clone);
-
-  const headerHeight = source.offsetHeight || 128;
-  const onScroll = () => {
-    const active = window.scrollY > headerHeight;
-    source.classList.toggle('active', active);
-    clone.classList.toggle('active', active);
-  };
-  window.addEventListener('scroll', onScroll, { passive: true });
-  onScroll();
   return () => {
-    window.removeEventListener('scroll', onScroll);
     clone.remove();
+  };
+}
+
+/** Orig's theme JS toggles `.expanded` on `.mobile-nav__wrapper` when the
+ *  hamburger `.mobile-nav__toggler` is clicked. `.expanded` slides the nav
+ *  panel in via `transform: translateX(0)` (see style.css). The `.mobile-nav__close`
+ *  icon and the transparent `.mobile-nav__overlay` below the panel both close
+ *  it. We replicate the toggle with no jQuery. */
+function applyMobileNav(root: HTMLElement): (() => void) | undefined {
+  const wrapper = root.querySelector<HTMLElement>('.mobile-nav__wrapper');
+  if (!wrapper) return undefined;
+  const listeners: Array<[Element, string, EventListener]> = [];
+
+  // WordPress renders `.mobile-nav__container` as an EMPTY div; boskery's
+  // theme JS clones `.main-menu .main-menu__list` into it on page load.
+  // Recreate that clone here, strip duplicate IDs, then append a `<button>`
+  // dropdown toggler inside each anchor of a `.menu-item-has-children` so
+  // sub-menus can be expanded on tap (matches the orig markup we probed).
+  const container = root.querySelector<HTMLElement>('.mobile-nav__container');
+  if (container && !container.children.length) {
+    const source = root.querySelector<HTMLElement>('.main-menu .main-menu__list');
+    if (source) {
+      const clone = source.cloneNode(true) as HTMLElement;
+      clone.removeAttribute('id');
+      clone.querySelectorAll('[id]').forEach((el) => el.removeAttribute('id'));
+      // Add chevron buttons to any parent-item anchors missing one.
+      clone.querySelectorAll<HTMLElement>('.menu-item-has-children > a').forEach((a) => {
+        if (a.querySelector(':scope > button')) return;
+        const btn = document.createElement('button');
+        btn.setAttribute('aria-label', 'dropdown toggler');
+        btn.innerHTML = '<i class="fa fa-angle-down"></i>';
+        a.appendChild(btn);
+      });
+      container.appendChild(clone);
+    }
+  }
+
+  const open = () => { wrapper.classList.add('expanded'); };
+  const close = () => { wrapper.classList.remove('expanded'); };
+
+  // Hamburger toggles (there are usually two — one in the top bar + one in
+  // the main header — both scoped outside .mobile-nav__wrapper).
+  document.querySelectorAll<HTMLElement>('.mobile-nav__toggler').forEach((btn) => {
+    if (wrapper.contains(btn)) return;
+    const h = (e: Event) => { e.preventDefault(); e.stopPropagation(); open(); };
+    btn.addEventListener('click', h);
+    listeners.push([btn, 'click', h]);
+  });
+
+  // Close icon + overlay inside the panel.
+  wrapper.querySelectorAll<HTMLElement>('.mobile-nav__close, .mobile-nav__overlay').forEach((el) => {
+    const h = (e: Event) => { e.preventDefault(); e.stopPropagation(); close(); };
+    el.addEventListener('click', h);
+    listeners.push([el, 'click', h]);
+  });
+
+  // Tapping an actual menu link should close the panel (mirrors orig UX).
+  wrapper.querySelectorAll<HTMLAnchorElement>('.mobile-nav__container a').forEach((a) => {
+    // Skip the `<a href="#">` that only exists to hold the dropdown toggler.
+    if (a.getAttribute('href') === '#' || a.classList.contains('menu-f')) return;
+    const h = () => close();
+    a.addEventListener('click', h);
+    listeners.push([a, 'click', h]);
+  });
+
+  // Dropdown sub-menus inside the mobile nav. Orig's markup embeds a
+  // `<button>` inside the `<a>` element of any `.menu-item-has-children`.
+  // Clicking it toggles the `<ul>` sibling's `display` and flips a `.expanded`
+  // class on the button (CSS rotates the chevron via the class).
+  wrapper.querySelectorAll<HTMLElement>('.menu-item-has-children > a button').forEach((btn) => {
+    const li = btn.closest<HTMLElement>('.menu-item-has-children');
+    const ul = li?.querySelector<HTMLElement>(':scope > ul');
+    if (!ul) return;
+    // Start collapsed (orig's CSS default is `display: none` on sub-menus).
+    ul.style.display = 'none';
+    btn.classList.remove('expanded');
+    const h = (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const isOpen = btn.classList.toggle('expanded');
+      ul.style.display = isOpen ? 'block' : 'none';
+    };
+    btn.addEventListener('click', h);
+    listeners.push([btn, 'click', h]);
+    // Also trap clicks on the parent anchor that holds the nested button, so
+    // tapping "Our Products" toggles (rather than navigating to "#").
+    const parentA = btn.closest('a');
+    if (parentA && parentA.getAttribute('href') === '#') {
+      const ah = (e: Event) => {
+        e.preventDefault();
+        const isOpen = btn.classList.toggle('expanded');
+        ul.style.display = isOpen ? 'block' : 'none';
+      };
+      parentA.addEventListener('click', ah);
+      listeners.push([parentA, 'click', ah]);
+    }
+  });
+
+  return () => {
+    for (const [el, ev, h] of listeners) el.removeEventListener(ev, h);
+    wrapper.classList.remove('expanded');
+  };
+}
+
+/** Search popup: clicking `.search-toggler` flips `.active` on `.search-popup`,
+ *  which triggers a CSS scale-in from a circular overlay. The popup markup
+ *  contains a second `.search-toggler` (the overlay `<div>`) which acts as
+ *  the click-outside dismiss. Escape also closes. */
+function applySearchPopup(root: HTMLElement): (() => void) | undefined {
+  const popup = root.querySelector<HTMLElement>('.search-popup');
+  if (!popup) return undefined;
+  const listeners: Array<[Element | Document, string, EventListener]> = [];
+
+  const toggle = (e: Event) => {
+    e.preventDefault();
+    // Stop the StaticPage SPA click interceptor from treating the anchor's
+    // `href="index.html#"` as a navigation target (would trigger a rerender
+    // that tears down this effect and drops the `.active` we just added).
+    e.stopPropagation();
+    popup.classList.toggle('active');
+  };
+  document.querySelectorAll<HTMLElement>('.search-toggler').forEach((btn) => {
+    btn.addEventListener('click', toggle);
+    listeners.push([btn, 'click', toggle]);
+  });
+  const onKey = (e: Event) => {
+    if ((e as KeyboardEvent).key === 'Escape') popup.classList.remove('active');
+  };
+  document.addEventListener('keydown', onKey);
+  listeners.push([document, 'keydown', onKey]);
+  return () => {
+    for (const [el, ev, h] of listeners) (el as HTMLElement).removeEventListener(ev, h);
+    popup.classList.remove('active');
+  };
+}
+
+/** Video-popup button (`.video-button.video-popup`) normally opens a MagnificPopup
+ *  lightbox with the MP4 at its href. Without that library the click does
+ *  nothing (and in some browsers would try to navigate to the MP4 file,
+ *  leaving the SPA). Shim a minimal lightbox: overlay + <video> + close. */
+function applyVideoPopup(root: HTMLElement): (() => void) | undefined {
+  const btns = root.querySelectorAll<HTMLAnchorElement>('a.video-popup, a.video-button');
+  if (!btns.length) return undefined;
+  const listeners: Array<[Element, string, EventListener]> = [];
+  let overlay: HTMLDivElement | null = null;
+
+  const close = () => {
+    if (!overlay) return;
+    overlay.remove();
+    overlay = null;
+    document.body.style.overflow = '';
+  };
+  const onClick = (e: Event) => {
+    const a = e.currentTarget as HTMLAnchorElement;
+    const href = a.getAttribute('href') || '';
+    if (!href) return;
+    e.preventDefault();
+    // Stop the StaticPage SPA click interceptor from navigating to the MP4
+    // path (rewriteAssetUrls prefixes it with BASE, so the wp-content guard
+    // in StaticPage.tsx no longer matches).
+    e.stopPropagation();
+    overlay = document.createElement('div');
+    overlay.className = 'vi-video-lightbox';
+    Object.assign(overlay.style, {
+      position: 'fixed', inset: '0', zIndex: '10000',
+      background: 'rgba(0,0,0,0.88)', display: 'flex',
+      alignItems: 'center', justifyContent: 'center',
+      opacity: '0', transition: 'opacity 250ms ease-out',
+    });
+    const video = document.createElement('video');
+    video.src = href;
+    video.controls = true;
+    video.autoplay = true;
+    video.playsInline = true;
+    Object.assign(video.style, {
+      maxWidth: '90vw', maxHeight: '85vh',
+      boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+    });
+    const closeBtn = document.createElement('button');
+    closeBtn.setAttribute('aria-label', 'Close');
+    closeBtn.innerHTML = '&times;';
+    Object.assign(closeBtn.style, {
+      position: 'absolute', top: '20px', right: '24px',
+      width: '44px', height: '44px', borderRadius: '50%',
+      border: 'none', background: 'rgba(255,255,255,0.12)',
+      color: '#fff', fontSize: '28px', lineHeight: '1',
+      cursor: 'pointer', backdropFilter: 'blur(8px)',
+    });
+    closeBtn.addEventListener('click', close);
+    overlay.addEventListener('click', (ev) => { if (ev.target === overlay) close(); });
+    overlay.appendChild(video);
+    overlay.appendChild(closeBtn);
+    document.body.appendChild(overlay);
+    document.body.style.overflow = 'hidden';
+    requestAnimationFrame(() => { if (overlay) overlay.style.opacity = '1'; });
+  };
+  btns.forEach((b) => {
+    b.addEventListener('click', onClick);
+    listeners.push([b, 'click', onClick]);
+  });
+  const onKey = (e: Event) => { if ((e as KeyboardEvent).key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  return () => {
+    for (const [el, ev, h] of listeners) el.removeEventListener(ev, h);
+    document.removeEventListener('keydown', onKey);
+    close();
   };
 }
 
@@ -341,5 +546,8 @@ export function applyStaticFallbacks(root: HTMLElement): () => void {
   const c1 = applyScrollToTop(root);
   const c2 = applyStickyHeaderClone(root);
   const c3 = applyFaqAccordion(root);
-  return () => { c1?.(); c2?.(); c3?.(); };
+  const c4 = applyMobileNav(root);
+  const c5 = applySearchPopup(root);
+  const c6 = applyVideoPopup(root);
+  return () => { c1?.(); c2?.(); c3?.(); c4?.(); c5?.(); c6?.(); };
 }

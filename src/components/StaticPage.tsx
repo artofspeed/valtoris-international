@@ -21,9 +21,52 @@ const BASE = import.meta.env.BASE_URL; // e.g. "/valtoris-international/" or "/"
  */
 const PREFIX = String.raw`(?:\.\.\/)*\/?`;
 
+/** Routes the SPA knows about. Used to recognize which `<a href="/...">`
+ *  links are internal navigation (so we can prefix them with BASE) vs.
+ *  arbitrary anchors that would open the new tab at the wrong URL on a
+ *  GitHub Pages subpath deploy. Kept in sync with src/pages/index.ts. */
+const INTERNAL_NAV_PATHS = [
+  'about-us',
+  'papers',
+  'beef-tenderloin',
+  'pork',
+  'chicken',
+  'greens',
+  'sugar',
+  'news',
+  'contact-us',
+  'login',
+  '404-error',
+  'valtoris-attends-canadian-meat-council-annual-conference-2025',
+];
+
+/** Rewrite any `href="/about-us/"`, `href="about-us/"`, or origin-absolute
+ *  `href="https://valtorisinternational.com/about-us/"` that points at one of
+ *  our SPA routes so it resolves to the BASE-prefixed URL. Needed for
+ *  `target="_blank"` anchors (which bypass our SPA click interceptor) to
+ *  land on the correct page under a subpath deploy like `/valtoris-international/`. */
+function rewriteNavHrefs(html: string): string {
+  const base = BASE.endsWith('/') ? BASE : BASE + '/';
+  const group = INTERNAL_NAV_PATHS.join('|');
+  return html
+    .replace(
+      new RegExp(`\\bhref=(["'])https?://valtorisinternational\\.com/(${group})/?(#[^"'\\s]*)?\\1`, 'gi'),
+      (_m, q, p, frag = '') => `href=${q}${base}${p}/${frag || ''}${q}`,
+    )
+    .replace(
+      new RegExp(`\\bhref=(["'])/?(${group})/?(#[^"'\\s]*)?\\1`, 'g'),
+      (_m, q, p, frag = '') => `href=${q}${base}${p}/${frag || ''}${q}`,
+    )
+    // Home link: orig markup uses the origin URL; rewrite to BASE.
+    .replace(
+      /\bhref=(["'])https?:\/\/valtorisinternational\.com\/?\1/gi,
+      (_m, q) => `href=${q}${base}${q}`,
+    );
+}
+
 function rewriteAssetUrls(html: string): string {
   const base = BASE.endsWith('/') ? BASE : BASE + '/';
-  return html
+  return rewriteNavHrefs(html)
     // src="(…)wp-content/…" etc. (absolute, bare, or ../-relative)
     .replace(
       new RegExp(
@@ -153,6 +196,7 @@ export function StaticPage({ page }: { page: PageModule }) {
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
+    const basePrefix = BASE.endsWith('/') ? BASE.slice(0, -1) : BASE; // e.g. "/valtoris-international" or ""
     function onClick(e: MouseEvent) {
       const target = (e.target as Element | null)?.closest('a') as HTMLAnchorElement | null;
       if (!target) return;
@@ -163,8 +207,11 @@ export function StaticPage({ page }: { page: PageModule }) {
       // Skip external, mailto, tel, protocol-relative, fragments
       if (href.startsWith('mailto:') || href.startsWith('tel:') || href.startsWith('#')) return;
       if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//')) return;
-      // Asset links (lightbox, downloads) — let the browser handle them normally
-      if (/^\/?wp-content\//.test(href) || /^\/?wp-json\//.test(href)) return;
+      // Asset links (lightbox, downloads) — let the browser handle them normally.
+      // Accept both root-relative `/wp-content/` and BASE-prefixed
+      // `/valtoris-international/wp-content/` (post-rewriteAssetUrls).
+      const assetRe = new RegExp(`^(?:${basePrefix})?/?wp-(content|includes|json)/`);
+      if (assetRe.test(href)) return;
       // wget saved root-index as `index.html` in nav markup
       let path = href;
       if (path === 'index.html' || path.endsWith('/index.html')) {
@@ -172,6 +219,13 @@ export function StaticPage({ page }: { page: PageModule }) {
       }
       // Strip trailing slash inconsistencies so our route table matches
       if (!path.startsWith('/')) path = '/' + path;
+      // If the href was BASE-rewritten by rewriteNavHrefs (e.g. `/valtoris-international/contact-us/`),
+      // strip the basename so React Router's `basename` prop doesn't double-prefix.
+      if (basePrefix && path.startsWith(basePrefix + '/')) {
+        path = path.slice(basePrefix.length) || '/';
+      } else if (basePrefix && path === basePrefix) {
+        path = '/';
+      }
       e.preventDefault();
       navigate(path);
     }
