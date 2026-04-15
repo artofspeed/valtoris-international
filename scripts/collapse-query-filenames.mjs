@@ -113,9 +113,16 @@ async function fixCssFiles() {
   for (const p of files) {
     const txt = await readFile(p, 'utf-8').catch(() => '');
     if (!txt) continue;
+    // Match any url(...) whose reference contains a `?` or URL-encoded `%3F`.
+    // This catches both absolute `/wp-content/...?ver=123` and relative
+    // `fonts/icomoon.eot%3Fqpdwfh` forms from wget-mirrored stylesheets.
+    // Skip `data:` URIs and `http(s)://` (those are handled by inline-external).
     const fixed = txt.replace(
-      /url\(\s*(["']?)\s*([^)"'\s]*wp-content\/[^)"'\s]*(?:\?|%3F)[^)"'\s]*)\s*(["']?)\s*\)/g,
-      (_m, q1, ref, q2) => `url(${q1}${fixReference(ref)}${q2})`,
+      /url\(\s*(["']?)\s*([^)"'\s]*(?:\?|%3F)[^)"'\s]*)\s*(["']?)\s*\)/g,
+      (m, q1, ref, q2) => {
+        if (ref.startsWith('data:') || ref.startsWith('http://') || ref.startsWith('https://')) return m;
+        return `url(${q1}${fixReference(ref)}${q2})`;
+      },
     );
     if (fixed !== txt) { await writeFile(p, fixed); changes++; }
   }
