@@ -6,51 +6,58 @@ import { applyStaticFallbacks } from './staticFallbacks';
 const BASE = import.meta.env.BASE_URL; // e.g. "/valtoris-international/" or "/"
 
 /**
- * WordPress-generated HTML contains asset URLs in three forms, inconsistently:
- *   - absolute root:  src="/wp-content/uploads/..."   (most non-home pages)
- *   - relative:       src="wp-content/uploads/..."    (home page)
+ * WordPress-generated HTML contains asset URLs in several forms, inconsistently:
+ *   - absolute root:  src="/wp-content/uploads/..."     (most non-home pages)
+ *   - relative:       src="wp-content/uploads/..."      (home page)
+ *   - up-relative:    srcset=".../paper.jpg, ../wp-content/..."  (wget-depth fix)
  *   - inline CSS:     style="...url(/wp-content/...)" or url(wp-content/...)
+ *   - wp-includes:    href="/wp-includes/css/dist/..."   (Gutenberg block CSS)
  * None of these work under a Pages subpath like /valtoris-international/.
- * Normalize every internal asset URL to `${BASE}wp-content/...`.
+ * Normalize every internal asset URL to `${BASE}wp-content/...` (or wp-includes).
+ *
+ * `PREFIX` matches an optional chain of leading-dot-slash or slash segments
+ * before the `wp-content`/`wp-includes` path — handles `/`, ``, `../`,
+ * `../../`, etc.
  */
+const PREFIX = String.raw`(?:\.\.\/)*\/?`;
+
 function rewriteAssetUrls(html: string): string {
   const base = BASE.endsWith('/') ? BASE : BASE + '/';
   return html
-    // src="/wp-content/…"  or  src="wp-content/…"  (same for href, srcset, data-src)
+    // src="(…)wp-content/…" etc. (absolute, bare, or ../-relative)
     .replace(
-      /\b(src|href|srcset|data-src|data-srcset|poster|data-poster|data-bg|data-bg-image)=(["'])\/?wp-content\//g,
-      (_m, attr, q) => `${attr}=${q}${base}wp-content/`,
+      new RegExp(
+        `\\b(src|href|srcset|data-src|data-srcset|poster|data-poster|data-bg|data-bg-image)=(["'])${PREFIX}wp-(content|includes|json)\\/`,
+        'g',
+      ),
+      (_m, attr, q, seg) => `${attr}=${q}${base}wp-${seg}/`,
     )
-    // srcset has comma-separated "URL size" pairs; catch leading-slash forms inside
+    // srcset has comma-separated "URL size" pairs; rewrite every URL inside.
     .replace(
-      /(,\s*)\/?wp-content\//g,
-      (_m, lead) => `${lead}${base}wp-content/`,
+      new RegExp(`(,\\s*)${PREFIX}wp-(content|includes)\\/`, 'g'),
+      (_m, lead, seg) => `${lead}${base}wp-${seg}/`,
     )
-    // CSS url(...) - both unquoted and quoted, absolute or relative
+    // CSS url(...) - both unquoted and quoted
     .replace(
-      /url\((\s*["']?)\/?wp-content\//g,
-      (_m, lead) => `url(${lead}${base}wp-content/`,
-    )
-    // wp-json API links (none are hit, but rewrite for correctness)
-    .replace(
-      /\b(href)=(["'])\/wp-json\//g,
-      (_m, a, q) => `${a}=${q}${base}wp-json/`,
+      new RegExp(`url\\((\\s*["']?)${PREFIX}wp-(content|includes)\\/`, 'g'),
+      (_m, lead, seg) => `url(${lead}${base}wp-${seg}/`,
     );
 }
 
 function rewriteCss(css: string): string {
   const base = BASE.endsWith('/') ? BASE : BASE + '/';
   return css.replace(
-    /url\((\s*["']?)\/?wp-content\//g,
-    (_m, lead) => `url(${lead}${base}wp-content/`,
+    new RegExp(`url\\((\\s*["']?)${PREFIX}wp-(content|includes)\\/`, 'g'),
+    (_m, lead, seg) => `url(${lead}${base}wp-${seg}/`,
   );
 }
 
 function rewriteHref(href: string): string {
   const base = BASE.endsWith('/') ? BASE : BASE + '/';
   if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//') || href.startsWith('data:')) return href;
-  if (href.startsWith('/wp-content/')) return base + href.slice(1);
-  if (href.startsWith('wp-content/')) return base + href;
+  // Normalize any `../`-prefixed or slash-prefixed wp-* reference
+  const m = href.match(/^(?:\.\.\/)*\/?(wp-(?:content|includes|json)\/.+)$/);
+  if (m) return base + m[1];
   return href;
 }
 
