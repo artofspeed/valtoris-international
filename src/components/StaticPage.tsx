@@ -41,6 +41,22 @@ function rewriteAssetUrls(html: string): string {
     .replace(
       new RegExp(`url\\((\\s*["']?)${PREFIX}wp-(content|includes)\\/`, 'g'),
       (_m, lead, seg) => `url(${lead}${base}wp-${seg}/`,
+    )
+    // External mirror references (bracketweb.com etc.) that `inline-external`
+    // already downloaded under `wp-content/ext/<host>/<path>`. Rewrite only
+    // inline style `url(...)` and asset-bearing attrs (never `href`, which
+    // is usually navigation). Safe because missing files 404 silently; real
+    // external anchor links are untouched.
+    .replace(
+      /style="([^"]*)"/g,
+      (_m, css) => `style="${css.replace(
+        /url\(\s*(["']?)\s*https?:\/\/([^/)\s"']+)\//g,
+        (_mm: string, q: string, host: string) => `url(${q}${base}wp-content/ext/${host}/`,
+      )}"`,
+    )
+    .replace(
+      /\b(src|data-src|data-bg|data-bg-image|poster)=(["'])https?:\/\/([^/)\s"']+)\//g,
+      (_m, attr, q, host) => `${attr}=${q}${base}wp-content/ext/${host}/`,
     );
 }
 
@@ -128,7 +144,9 @@ export function StaticPage({ page }: { page: PageModule }) {
   // Apply static fallbacks (show first owl slide, un-hide `.wow`, render
   // final counter values) right after the page HTML is injected.
   useEffect(() => {
-    if (hostRef.current) applyStaticFallbacks(hostRef.current);
+    if (!hostRef.current) return;
+    const cleanup = applyStaticFallbacks(hostRef.current);
+    return cleanup;
   }, [bodyHtml]);
 
   // Intercept internal link clicks so the SPA router handles them.

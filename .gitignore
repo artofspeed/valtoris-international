@@ -32,3 +32,8 @@ compare-screens/
 
 # Raw wget mirror (used only during initial clone)
 mirror/
+
+# Visual-diff screenshots and ad-hoc debug artifacts
+visual-diff/
+debug-viewport/
+debug-*.png
