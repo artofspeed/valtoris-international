@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { PageModule } from '../pages';
+import { applyStaticFallbacks } from './staticFallbacks';
 
 const BASE = import.meta.env.BASE_URL; // e.g. "/valtoris-international/" or "/"
 
@@ -116,6 +117,12 @@ export function StaticPage({ page }: { page: PageModule }) {
     }
     window.scrollTo(0, 0);
   }, [location.pathname, location.hash]);
+
+  // Apply static fallbacks (show first owl slide, un-hide `.wow`, render
+  // final counter values) right after the page HTML is injected.
+  useEffect(() => {
+    if (hostRef.current) applyStaticFallbacks(hostRef.current);
+  }, [bodyHtml]);
 
   // Intercept internal link clicks so the SPA router handles them.
   useEffect(() => {
