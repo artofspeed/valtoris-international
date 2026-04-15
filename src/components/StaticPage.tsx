@@ -64,9 +64,44 @@ function rewriteNavHrefs(html: string): string {
     );
 }
 
+/** Sanitize WordPress-emitted href bugs that the orig site happens to ship:
+ *   • Footer phone link malformed as `href="http://+1-..."` (auto-link plugin
+ *     mistakenly treated the bare phone number as an http URL). Convert to tel:
+ *   • Sidebar widget links to WP archive routes (`/author/*`, `/category/*`,
+ *     `/tag/*`) that don't exist in our static clone — convert to inert
+ *     placeholders so they don't dump the user on the 404 page.
+ *   • Logo `<a>` with no href attribute — make it point at the home route. */
+function sanitizeBrokenHrefs(html: string): string {
+  const base = BASE.endsWith('/') ? BASE : BASE + '/';
+  return html
+    // Phone number wrongly auto-linked as http://+1-...
+    .replace(
+      /\bhref=(["'])https?:\/\/(\+\d[\d\s\-]+)\1/g,
+      (_m, q, num) => `href=${q}tel:${num.replace(/\s+/g, '')}${q}`,
+    )
+    // WordPress archive paths the static clone doesn't serve. Turn into
+    // hash placeholders so the SPA click handler intercepts them as no-ops.
+    .replace(
+      /\bhref=(["'])\/?(author|category|tag)\/[^"'\s]*\1/g,
+      (_m, q) => `href=${q}#${q}`,
+    )
+    // Logo / dead `<a>` with no href — point them at the home route so they
+    // don't render as cursor:default unclickable text.
+    .replace(
+      /<a\b(?![^>]*\bhref=)([^>]*)>/g,
+      (_m, attrs) => `<a href="${base}"${attrs}>`,
+    )
+    // WP breadcrumb home link is emitted as `href=""`. Empty href reloads
+    // the current page on click — point it at the home route instead.
+    .replace(
+      /\bhref=(["'])\1/g,
+      (_m, q) => `href=${q}${base}${q}`,
+    );
+}
+
 function rewriteAssetUrls(html: string): string {
   const base = BASE.endsWith('/') ? BASE : BASE + '/';
-  return rewriteNavHrefs(html)
+  return sanitizeBrokenHrefs(rewriteNavHrefs(html))
     // src="(…)wp-content/…" etc. (absolute, bare, or ../-relative)
     .replace(
       new RegExp(
@@ -120,6 +155,18 @@ function rewriteHref(href: string): string {
   return href;
 }
 
+/** Global registries of head CSS that's already been added to the document.
+ *  We never remove WP stylesheets on route change — they're shared across
+ *  every page (theme, Elementor kit, vendor libs), and removing then
+ *  re-adding them tears down `<link>` nodes that the browser would have to
+ *  re-fetch and re-parse. During that gap, the new page's HTML renders
+ *  unstyled (the "Twitter logo + raw text flash" the user reported when
+ *  navigating Home → About). With a cumulative cache, every CSS file is
+ *  loaded once and stays loaded; route changes only update the body class,
+ *  title, and meta — instant. */
+const loadedHrefs = new Set<string>();
+const loadedStyleKeys = new Set<string>();
+
 export function StaticPage({ page }: { page: PageModule }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -131,48 +178,47 @@ export function StaticPage({ page }: { page: PageModule }) {
 
   // Inject head CSS (synchronously, before paint) so we don't FOUC.
   useLayoutEffect(() => {
-    const nodes: HTMLElement[] = [];
     for (const l of page.headLinks) {
+      const href = rewriteHref(l.href);
+      const key = `${l.rel || 'stylesheet'}|${href}|${l.media || ''}`;
+      if (loadedHrefs.has(key)) continue;
+      loadedHrefs.add(key);
       const link = document.createElement('link');
       if (l.rel) link.setAttribute('rel', l.rel);
-      link.setAttribute('href', rewriteHref(l.href));
+      link.setAttribute('href', href);
       if (l.type) link.setAttribute('type', l.type);
       if (l.media) link.setAttribute('media', l.media);
       if (l.as) link.setAttribute('as', l.as);
       if (l.crossorigin) link.setAttribute('crossorigin', l.crossorigin);
-      link.setAttribute('data-vi-page', page.title);
+      link.setAttribute('data-vi-static-css', '');
       document.head.appendChild(link);
-      nodes.push(link);
     }
     for (const s of page.headStyles) {
+      // Dedupe by id when present (WP gives most inline styles a stable id),
+      // else by the first chunk of CSS content (cheap proxy for identity).
+      const key = s.id ? `id:${s.id}` : `css:${s.css.length}:${s.css.slice(0, 200)}`;
+      if (loadedStyleKeys.has(key)) continue;
+      loadedStyleKeys.add(key);
       const style = document.createElement('style');
       if (s.id) style.id = s.id;
-      style.setAttribute('data-vi-page', page.title);
+      style.setAttribute('data-vi-static-css', '');
       style.appendChild(document.createTextNode(rewriteCss(s.css)));
       document.head.appendChild(style);
-      nodes.push(style);
     }
     document.title = page.title || 'Valtoris International';
-    // Meta description
+    // Meta description (mutate in place; the description is cumulative state
+    // we always overwrite on route change).
     let meta = document.querySelector('meta[name="description"]');
-    const created = !meta;
     if (!meta) {
       meta = document.createElement('meta');
       meta.setAttribute('name', 'description');
       document.head.appendChild(meta);
     }
-    const prevDesc = meta.getAttribute('content') || '';
     meta.setAttribute('content', page.metaDesc || '');
-    // Body class for per-page WordPress styles
-    const prevBodyClass = document.body.className;
+    // Body class for per-page WordPress styles. We always set; never restore
+    // (next route change will set its own; restore-on-cleanup just creates a
+    // brief flash of stale class).
     if (page.bodyClass) document.body.className = page.bodyClass;
-
-    return () => {
-      for (const n of nodes) n.remove();
-      if (created) meta?.remove();
-      else meta?.setAttribute('content', prevDesc);
-      document.body.className = prevBodyClass;
-    };
   }, [page]);
 
   // Scroll to top on route change (unless there's a hash)
@@ -203,10 +249,23 @@ export function StaticPage({ page }: { page: PageModule }) {
       if (target.target === '_blank' || target.hasAttribute('download')) return;
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
       const href = target.getAttribute('href');
-      if (!href) return;
-      // Skip external, mailto, tel, protocol-relative, fragments
-      if (href.startsWith('mailto:') || href.startsWith('tel:') || href.startsWith('#')) return;
+      // Missing or empty href: dead click. WordPress occasionally emits
+      // breadcrumb home links as `<a href="">` (empty). Browser default
+      // reloads the current page; we swallow it instead.
+      if (!href) { e.preventDefault(); return; }
+      // Skip external, mailto, tel, protocol-relative
+      if (href.startsWith('mailto:') || href.startsWith('tel:')) return;
       if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//')) return;
+      // Bare `#` or hash-only placeholders (e.g. `index.html#`, `/#`,
+      // `something/#`, `#`) are dropdown / scroll-to-top / dead-link
+      // placeholders. NEVER navigate — preventDefault swallows the browser's
+      // default "append # to URL" behaviour too. (Real in-page anchor
+      // fragments like `#mission` should pass through to the browser.)
+      if (href === '#' || href.endsWith('#') || href.endsWith('/#')) {
+        e.preventDefault();
+        return;
+      }
+      if (href.startsWith('#')) return; // real fragment scroll target — let browser handle
       // Asset links (lightbox, downloads) — let the browser handle them normally.
       // Accept both root-relative `/wp-content/` and BASE-prefixed
       // `/valtoris-international/wp-content/` (post-rewriteAssetUrls).

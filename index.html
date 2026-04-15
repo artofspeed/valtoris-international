@@ -6,6 +6,56 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Valtoris International Trading Inc.</title>
 
+    <!-- Critical CSS — injected synchronously so async WordPress stylesheets
+         can't transition stateful elements (mobile nav, preloader, sticky
+         header clone, scroll-to-top) from their unstyled defaults to their
+         styled "hidden" state on first paint. Without this, the mobile nav
+         briefly appears full-width and slides out to the left when CSS loads;
+         the preloader briefly flashes a black overlay; etc. -->
+    <style>
+      /* Mobile nav: keep off-screen and visibility:hidden until WP CSS arrives.
+         Once WP CSS loads, the same transform value applies (no value change,
+         no animation), and the .expanded class then triggers a clean slide-in. */
+      .mobile-nav__wrapper {
+        transform: translateX(-100%);
+        visibility: hidden;
+      }
+      /* Synchronized single-step open/close animation. Override WP's staggered
+         500ms-delay choreography: wrapper and content slide together as one
+         object, in 350ms, with no separate content animation. */
+      .mobile-nav__wrapper,
+      .mobile-nav__wrapper.expanded {
+        transition: transform 350ms cubic-bezier(0.16, 1, 0.3, 1),
+                    visibility 0s linear 350ms !important;
+      }
+      .mobile-nav__wrapper.expanded {
+        transition: transform 350ms cubic-bezier(0.16, 1, 0.3, 1),
+                    visibility 0s linear 0s !important;
+      }
+      .mobile-nav__content,
+      .mobile-nav__wrapper.expanded .mobile-nav__content {
+        transform: none !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        transition: none !important;
+      }
+
+      /* Preloader: don't let the WP `.preloader` overlay flash on initial paint.
+         Our staticFallbacks JS removes it after mount, but the CSS would otherwise
+         briefly render a fullscreen black overlay before JS executes. */
+      .preloader { display: none !important; }
+
+      /* Scroll-to-top: starts off-screen + invisible. Without this, the unstyled
+         anchor briefly renders inline before WP CSS positions it. */
+      .scroll-to-top { opacity: 0; visibility: hidden; }
+
+      /* Sticky-header clone: stays off-screen permanently (we never .active it). */
+      .sticky-header--cloned { transform: translateY(-100%); visibility: hidden; }
+
+      /* Search popup: keep behind everything until .active. */
+      .search-popup { z-index: -2; }
+    </style>
+
     <!-- SPA-GitHub-Pages trick: if the 404.html redirected us here with an
          encoded path in the query string, restore the real URL before the app
          mounts so React Router sees the original path. -->
