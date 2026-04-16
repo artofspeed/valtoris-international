@@ -1,0 +1,743 @@
+/*
+ * Responsive polish overrides for the static WordPress clone.
+ *
+ * These rules override the bundled WP/Elementor/Boskery CSS to fix responsive
+ * glitches that the original site shipped: the vertical "BACK TO TOP" anchor
+ * clipping across mobile content, Elementor containers stacking every word on
+ * its own line in testimonials, product icons turning into a 2000px-tall
+ * vertical stack on mobile, decorative shapes overflowing the viewport, and
+ * the dead "Web Tech Craft" attribution in the footer.
+ *
+ * Loaded via a <link> that StaticPage.tsx appends AFTER every WP stylesheet,
+ * so source-order wins the cascade without needing !important everywhere.
+ */
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 1. Global: prevent decorative shapes from causing horizontal scroll/clip.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 0. Mobile-nav drawer + search popup: when not expanded, BOTH the dark
+ *    backdrop overlay AND the slide-in content panel must be fully hidden.
+ *    The original WP markup leaves `.mobile-nav__content` as
+ *    visibility:visible / display:block — which renders a 234px-tall
+ *    rgb(30,29,29) panel between the hero and the products on the home
+ *    page (the "gray band" the user complained about).
+ *    We force display:none unless the wrapper has the `expanded` class,
+ *    which the JS shim toggles when the user taps the hamburger.
+ * ─────────────────────────────────────────────────────────────────────────── */
+.mobile-nav__wrapper:not(.expanded) .mobile-nav__overlay,
+.mobile-nav__wrapper:not(.expanded) .mobile-nav__content {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.search-popup:not(.active):not(.open) {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Decorative "shape" images (circles, splats, arrows) that extend past the
+   viewport on small screens. WP positions them absolutely; we just clip. */
+@media (max-width: 767px) {
+  .about-one__shape__one,
+  .about-one__shape__two,
+  .about-one__shape__three,
+  .about-one__shape__four,
+  [class*="__shape__"],
+  .shape1,
+  .shape2,
+  .shape3,
+  .shape4,
+  .shape5 {
+    max-width: 100vw;
+    height: auto;
+  }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 2. Scroll-to-top: redesign as a compact circular button.
+ *    Was: rotated -90deg anchor with "BACK TO TOP" text pillar clipping at
+ *    right: -12px, overlapping content on every mobile page.
+ *    Now: 48x48 circle with an up-arrow icon, 16px from bottom-right corner.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+.scroll-to-top {
+  right: 16px !important;
+  bottom: 16px !important;
+  width: 48px !important;
+  height: 48px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  transform: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 50% !important;
+  background: #03228f !important;
+  box-shadow: 0 4px 16px rgba(3, 34, 143, 0.35);
+  transition: opacity 200ms ease, visibility 200ms ease, transform 150ms ease;
+}
+
+.scroll-to-top:hover {
+  background: #c49a41 !important;
+  transform: translateY(-2px) !important;
+}
+
+/* Hide the rotated "BACK TO TOP" text label entirely. */
+.scroll-to-top__text {
+  display: none !important;
+}
+
+/* The arrow indicator: style the inner span as an up-pointing chevron. */
+.scroll-to-top__wrapper {
+  position: static !important;
+  width: auto !important;
+  height: auto !important;
+  transform: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.scroll-to-top__inner {
+  width: 12px !important;
+  height: 12px !important;
+  border-top: 2px solid #fff !important;
+  border-right: 2px solid #fff !important;
+  transform: rotate(-45deg) translate(-1px, 1px) !important;
+  background: transparent !important;
+  display: block !important;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 3. Home "Our Products" row: horizontal 5-up on desktop, 3-col grid on
+ *    mobile. The Elementor container uses flex-direction: column on small
+ *    screens by default, turning the icon row into a 2000px-tall vertical
+ *    stack with 300px gaps between BEEF/PORK/CHICKEN/GRAINS/SUGAR.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
+  /* The 5 product tiles share a `.my-icon-sec` class. Their parent
+     `.e-con-inner` is `flex-direction: row` + `flex-wrap: wrap`. We force
+     each tile to 1/3 width and shrink the inner Elementor icon (which is
+     a 130x130 circle inside an `<a class="elementor-icon">`, NOT an <img>)
+     so it fits within the 1/3-width tile without overflowing. */
+  .my-icon-sec {
+    width: 33.333% !important;
+    flex: 0 0 33.333% !important;
+    padding: 8px 2px !important;
+    margin: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+  }
+  .my-icon-sec ~ .my-icon-sec,
+  .my-icon-sec {
+    gap: 0 !important;
+  }
+  /* The Elementor icon is `<a class="elementor-icon">` rendered as a 130px
+     circle. Shrink it to fit a 1/3-width tile (~120px) on mobile. */
+  .my-icon-sec .elementor-icon {
+    width: 80px !important;
+    height: 80px !important;
+    line-height: 80px !important;
+    font-size: 36px !important;
+    margin: 0 auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  .my-icon-sec .elementor-icon i,
+  .my-icon-sec .elementor-icon svg {
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 40px !important;
+    line-height: 1 !important;
+  }
+  .my-icon-sec .elementor-icon-wrapper {
+    width: 100% !important;
+    text-align: center !important;
+  }
+  /* Compact the heading (BEEF/PORK/CHICKEN/GRAINS/SUGAR label). */
+  .my-icon-sec h3,
+  .my-icon-sec h4,
+  .my-icon-sec .elementor-heading-title {
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+    letter-spacing: 0.04em !important;
+    margin: 4px 0 0 !important;
+    white-space: nowrap !important;
+  }
+  /* The two inner Elementor widget wrappers (icon + heading) often add
+     fixed 80px bottom margins on desktop; collapse on mobile. */
+  .my-icon-sec > .elementor-element {
+    margin-bottom: 0 !important;
+    padding: 0 !important;
+  }
+  /* Make the parent row wrap and use minimal vertical padding. */
+  :has(> .my-icon-sec) {
+    flex-wrap: wrap !important;
+    padding: 16px 4px !important;
+    row-gap: 4px !important;
+    column-gap: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    align-items: flex-start !important;
+  }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 4. Testimonials: the Boskery widget renders 2 columns by default. On a
+ *    375px viewport this gives each column ~80px of usable text width —
+ *    literally one word per line. Collapse to a single full-width column.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
+  /* The Boskery testimonials carousel never initialized — the .item siblings
+     are laid out as a horizontal flex row that overflows past the viewport
+     edge, so the user sees one full + one half-cut testimonial. Force the
+     carousel container to wrap and stack vertically; show all 4 testimonials
+     as a vertical scroll. */
+  .testimonials-one__carousel,
+  .boskery-owl__carousel,
+  .owl-carousel:not(.hero-slider-one__carousel):not(.hero-main-slider):not(.client-carousel__one):not(.client-carousel__two):not([class*="client-carousel"]):not([class*="brand"][class*="__carousel"]):not([class*="clients"][class*="__carousel"]) {
+    display: block !important;
+    flex-direction: column !important;
+    flex-wrap: wrap !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    transform: none !important;
+    overflow: visible !important;
+  }
+
+  .testimonials-one__carousel .item,
+  .boskery-owl__carousel .item,
+  .owl-carousel:not(.hero-slider-one__carousel):not(.client-carousel__one):not(.client-carousel__two):not([class*="client-carousel"]):not([class*="brand"][class*="__carousel"]):not([class*="clients"][class*="__carousel"]) .item {
+    flex: 0 0 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+    margin-bottom: 16px !important;
+  }
+
+  .testimonial-card,
+  .testimonial-one__card,
+  .testimonials-one__card {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Owl Carousel internals: stage + item override so JS-driven sizing
+     doesn't fight us. */
+  .testimonials-one__carousel .owl-stage,
+  .testimonials-one__carousel .owl-stage-outer,
+  .boskery-owl__carousel .owl-stage,
+  .boskery-owl__carousel .owl-stage-outer {
+    width: 100% !important;
+    max-width: 100% !important;
+    transform: none !important;
+    display: block !important;
+  }
+  .testimonials-one__carousel .owl-item,
+  .boskery-owl__carousel .owl-item {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+    float: none !important;
+  }
+
+  /* Testimonial author card block (name + title) was using flex which on
+     narrow columns collapsed to an 80px inner width. Let it breathe. */
+  .testimonial-card__content,
+  .testimonial-card__text,
+  .testimonial-card__identity,
+  .testimonial-card__identity__inner {
+    width: 100% !important;
+    min-width: 0 !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+    hyphens: none !important;
+  }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 5. "Since 1996" circular text badge on the About block — the rotated SVG
+ *    text overlay on the chef photo reads as broken because the photo is
+ *    cropped tightly on mobile. Hide the badge on mobile; the desktop layout
+ *    has enough headroom to keep it.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
+  .about-one__content__since,
+  .about-one__shape__since,
+  .about-one__image__text,
+  .about-one__image__inner > h3,
+  [class*="since-badge"],
+  [class*="_since"],
+  svg[class*="circle-text"] {
+    display: none !important;
+  }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 6. "YEARS OF EXPERIENCE" vertical rotated label in the About-us banner —
+ *    on mobile the banner is narrow and the vertical label sits awkwardly
+ *    inside the "25+" block. Flip it horizontal on mobile.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
+  .experience-year,
+  .experience-year__text,
+  [class*="experience"][class*="vertical"],
+  .fact-counter__text--vertical {
+    writing-mode: horizontal-tb !important;
+    transform: none !important;
+    text-orientation: mixed !important;
+  }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 7. Generic mobile spacing — Elementor sections inherit huge desktop
+ *    paddings (120px top/bottom) that make mobile pages scroll forever.
+ *    Tighten sensibly.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
+  section.elementor-section,
+  .elementor-section,
+  .e-con,
+  .e-con-full {
+    padding-top: clamp(32px, 8vw, 64px) !important;
+    padding-bottom: clamp(32px, 8vw, 64px) !important;
+  }
+
+  /* Hero slider on mobile: was 650px tall with a 16:9 video that on 375px
+     wide renders ~211px naturally — leaving 400px+ of dark-gray underlay
+     showing through the bottom. Constrain to a tighter height and force
+     the inner <video> to cover-crop so no gray band remains. */
+  .hero-slider-one,
+  .hero-main-slider,
+  .hero-slider-one__item,
+  .hero-slider-one__bg {
+    height: auto !important;
+    min-height: 480px !important;
+    max-height: 75vh !important;
+  }
+  .hero-slider-one__item {
+    padding: 64px 0 56px !important;
+    background-color: #03228f !important; /* brand navy underlay, not gray */
+  }
+  .hero-slider-one__bg,
+  .hero-slider-one__video,
+  .hero-slider-one__item video,
+  .hero-slider-one__item .hero-slider-one__image,
+  .hero-slider-one__item .hero-slider-one__image img {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center center !important;
+  }
+
+  /* Body copy: cap at a readable width with a tiny bit of horizontal gutter. */
+  .container,
+  .auto-container {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  /* Headings often ship with heavy desktop line-heights; tighten on mobile. */
+  h1, h2, h3, h4 {
+    line-height: 1.15 !important;
+  }
+
+  /* Large display headings can shrink a notch on narrow viewports without
+     losing their impact. */
+  .section-title__title,
+  .sec-title__title,
+  .elementor-heading-title {
+    font-size: clamp(1.5rem, 6.5vw, 2.25rem) !important;
+  }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 8. FAQ accordion: the toggle button is a square. When expanded, the
+ *    WP theme rotates the whole square 45deg to turn + into ×, which on
+ *    mobile reads as "the button itself rotated sideways". Keep the square
+ *    still; rely on the +/− icon swap only.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+.accordion-title,
+.accrodion-title,
+.accordion.active .accordion-title,
+.accrodion.active .accrodion-title {
+  transform: none !important;
+}
+
+.accordion-title__icon,
+.accrodion-title__icon {
+  transition: transform 200ms ease !important;
+}
+
+.accordion.active .accordion-title__icon,
+.accrodion.active .accrodion-title__icon {
+  transform: translateY(-27px) rotate(45deg) !important;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 9. Footer "Copyright by Web Tech Craft" attribution — the original WP
+ *    theme vendor credit. We rewrite this via HTML-rewrite in StaticPage.tsx
+ *    too; this rule just ensures the text has correct contrast if any
+ *    stray node is left.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+.site-footer__bottom a[href*="webtechcraft"],
+.site-footer__bottom a[href*="web-tech-craft"] {
+  pointer-events: none;
+  color: inherit !important;
+  text-decoration: none !important;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 10. Tap target sizing — any anchor or button smaller than 36x36 on mobile
+ *     is hard to hit. Bump up icon-only buttons in the header and nav.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
+  .mobile-nav__toggler,
+  .main-header__toggler,
+  .search-toggler {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 11. Hero dark-tint overlay (ALL viewports): the theme paints
+ *     `.hero-slider-one__bg::after` as a 50%-opacity black overlay with
+ *     `bottom: -96px` (mobile) / `bottom: -150px` (desktop) to make hero
+ *     text legible over the video. The overlay extends BELOW the hero,
+ *     rendering as a 127,127,127 gray band on top of the next section.
+ *     Constrain the overlay to the hero box on every viewport.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+.hero-slider-one__bg::after {
+  bottom: 0 !important;
+  height: 100% !important;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 12. About-us: fact counter section has a background image that often
+ *     fails to paint (theme asset missing), falling back to a solid gray
+ *     `<section>`. Replace with brand navy so it reads as intentional.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+.fact-counter-one,
+.fact-counter,
+[class*="fact-counter"][class*="__bg"],
+.counter-one,
+.counter-one__bg,
+.funfact-one,
+.funfact-one__bg {
+  background-color: #03228f !important;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 13. About-us mobile: "YEARS OF EXPERIENCE" rotated label next to the
+ *     25+ block and the "natural organic meat" circle badge on the delivery
+ *     portrait — neither adds value on a 375px screen; hide both.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
+  /* Vertical-writing year labels (multiple class variants across theme). */
+  .experience-year,
+  .experience-year__text,
+  .exprience-year,
+  .exprience-year__text,
+  .about-three__experience__title,
+  .about-two__experience__title,
+  .about-one__experience__title,
+  [class*="experience__title"],
+  [class*="experience"][class*="vertical"],
+  [class*="exprience"][class*="vertical"],
+  [class*="year__text"],
+  [class*="year-text"] {
+    writing-mode: horizontal-tb !important;
+    transform: none !important;
+    text-orientation: mixed !important;
+    position: static !important;
+    text-align: center !important;
+  }
+  /* Decorative rotated SVG/text badges. */
+  [class*="circle-text"],
+  [class*="curved-circle"],
+  [class*="rotate-text"],
+  [class*="text-rotate"],
+  [class*="badge-rotate"],
+  [class*="natural-organic"],
+  .delivery-one__circle-text,
+  .delivery-one__curved-circle,
+  .about-two__video__circle,
+  .about-two__circle-text,
+  .about-three__video__circle,
+  .about-three__circle-text,
+  .about-four__circle-text,
+  .feature-two__circle-text {
+    display: none !important;
+  }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 14. About-us: orphan "QUALITY OF MEAT" / "FRESH PRODUCE" / "SAFETY"
+ *     progress bars — the Elementor skill bars render with percentage
+ *     labels clipped off-screen and narrow red lines. Hide the broken
+ *     progress widget entirely on mobile; it doesn't add information.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
+  .skillbar-one,
+  .skillbar,
+  .progress-levels,
+  .progress-box,
+  .elementor-progress-wrapper,
+  .elementor-progress-bar,
+  [class*="skill-bar"],
+  [class*="progress-bar"][class*="elementor"] {
+    display: none !important;
+  }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 15. Brand logos ("BARBECUE" x4): the theme's client logos owl carousel
+ *     never initialized, so 4 copies of the same logo stack vertically.
+ *     Force a horizontal flex row so the 4 stay in a single strip.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+.client-carousel__one,
+.client-carousel__two,
+.brand-one__carousel,
+.brand-two__carousel,
+.brand-three__carousel,
+.brands-one__carousel,
+[class*="client-carousel"],
+[class*="brand"][class*="__carousel"],
+[class*="clients"][class*="__carousel"] {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  justify-content: space-around !important;
+  align-items: center !important;
+  gap: 16px !important;
+  padding: 16px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  transform: none !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Owl carousel internals on client/brand carousels. */
+.client-carousel__one .owl-stage-outer,
+.client-carousel__one .owl-stage,
+[class*="client-carousel"] .owl-stage-outer,
+[class*="client-carousel"] .owl-stage,
+[class*="brand"][class*="__carousel"] .owl-stage-outer,
+[class*="brand"][class*="__carousel"] .owl-stage {
+  display: flex !important;
+  flex-direction: row !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  transform: none !important;
+}
+
+.client-carousel__one .owl-item,
+.client-carousel__one__item,
+.client-carousel__one .item,
+[class*="client-carousel"] .owl-item,
+[class*="client-carousel"] .item,
+.brand-one__carousel .item,
+.brand-two__carousel .item,
+.brand-three__carousel .item,
+.brands-one__carousel .item,
+[class*="brand"][class*="__carousel"] .item,
+[class*="clients"][class*="__carousel"] .item {
+  flex: 1 1 0 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: 25% !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  float: none !important;
+}
+
+.client-carousel__one img,
+.client-carousel__one__item img,
+[class*="client-carousel"] img,
+.brand-one__carousel .item img,
+.brand-two__carousel .item img,
+.brand-three__carousel .item img,
+.brands-one__carousel .item img,
+[class*="brand"][class*="__carousel"] .item img,
+[class*="clients"][class*="__carousel"] .item img {
+  display: block !important;
+  width: 100% !important;
+  height: auto !important;
+  max-width: 70px !important;
+  max-height: 60px !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  flex: 0 0 auto !important;
+}
+
+/* Ensure items are tall enough for the logos and have minimum width. */
+.client-carousel__one__item,
+.client-carousel__one .owl-item,
+[class*="client-carousel"] .owl-item,
+[class*="client-carousel"] .item {
+  min-width: 60px !important;
+  min-height: 60px !important;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 16. Product pages (Beef/Pork/Chicken/Greens/Sugar/Papers): a subset of
+ *     these render their body text in a 50%-width Elementor column. On
+ *     mobile collapse all children of the product-detail grid to full width.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
+  .product-details,
+  .product-details__content,
+  .product-details__bottom {
+    display: block !important;
+  }
+  /* Elementor two-column inner columns on product pages. */
+  .product-details .elementor-column,
+  .product-details .elementor-col-50,
+  .product-details .elementor-col-33,
+  .elementor-widget-text-editor,
+  .elementor-widget-text-editor .elementor-widget-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 100% !important;
+  }
+  /* A text-editor widget sitting inside a flex row — make it span full row. */
+  .e-con-inner > .elementor-widget-text-editor,
+  .e-con > .elementor-widget-text-editor {
+    width: 100% !important;
+  }
+  /* Elementor containers with flex-direction: row that place a text widget
+     next to an image (beef-tenderloin, papers, etc.) wrap on mobile. The
+     `elementor-widget__width-initial` modifier makes the text widget take
+     only content-width, so we force it back to 100% and wrap the flex row.
+     Target any nested e-con-full/e-flex row inside a parent e-con (child
+     flex containers, not the top-level page wrapper). */
+  .e-con.e-flex.e-child,
+  .e-con-full.e-flex.e-child {
+    flex-direction: column !important;
+    flex-wrap: wrap !important;
+  }
+  .e-con.e-flex.e-child > *,
+  .e-con-full.e-flex.e-child > * {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .elementor-widget__width-initial,
+  .elementor-widget__width-auto {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  /* .service-details content column on the product / paper detail pages. */
+  .service-details,
+  .service-details__content,
+  .service-details__content__inner,
+  .service-details__content__inner-2,
+  [class*="service-details__content"] {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 17. Brand carousel — extra-specific overrides to beat owl-carousel's own
+ *     `.owl-carousel.owl-loaded` base rule (specificity 0,2,0). We combine
+ *     multiple classes on the same element to raise our specificity to 0,3,0
+ *     and force the horizontal strip on every viewport.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+.owl-carousel.owl-loaded.client-carousel__one,
+.owl-carousel.owl-loaded[class*="client-carousel"],
+.owl-carousel.owl-loaded[class*="brand"][class*="__carousel"],
+.owl-carousel.owl-loaded[class*="clients"][class*="__carousel"],
+.client-carousel__one.owl-carousel,
+[class*="client-carousel"].owl-carousel {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  justify-content: space-around !important;
+  align-items: center !important;
+  gap: 16px !important;
+  padding: 16px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  transform: none !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Owl's .owl-stage-outer and .owl-stage get inline transform/width from JS;
+   reset them so all items sit in the natural flex row instead of a drag-track. */
+.client-carousel__one.owl-carousel .owl-stage-outer,
+[class*="client-carousel"].owl-carousel .owl-stage-outer,
+.owl-carousel.owl-loaded.client-carousel__one .owl-stage-outer,
+.owl-carousel.owl-loaded[class*="brand"][class*="__carousel"] .owl-stage-outer {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+}
+
+.client-carousel__one.owl-carousel .owl-stage,
+[class*="client-carousel"].owl-carousel .owl-stage,
+.owl-carousel.owl-loaded.client-carousel__one .owl-stage,
+.owl-carousel.owl-loaded[class*="brand"][class*="__carousel"] .owl-stage {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  transform: none !important;
+  justify-content: space-around !important;
+}
+
+.client-carousel__one.owl-carousel .owl-item,
+[class*="client-carousel"].owl-carousel .owl-item,
+.owl-carousel.owl-loaded.client-carousel__one .owl-item,
+.owl-carousel.owl-loaded[class*="brand"][class*="__carousel"] .owl-item {
+  flex: 1 1 0 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: 25% !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  float: none !important;
+}

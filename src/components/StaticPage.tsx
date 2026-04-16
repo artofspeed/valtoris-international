@@ -2,6 +2,10 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { PageModule } from '../pages';
 import { applyStaticFallbacks } from './staticFallbacks';
+// Polish overrides imported as a URL string (Vite's `?url` suffix) so we can
+// append it as the LAST stylesheet in <head> — after every WP/Elementor rule,
+// so source-order wins the cascade without `!important` spam.
+import polishCssUrl from '../polish.css?url';
 
 const BASE = import.meta.env.BASE_URL; // e.g. "/valtoris-international/" or "/"
 
@@ -96,7 +100,29 @@ function sanitizeBrokenHrefs(html: string): string {
     .replace(
       /\bhref=(["'])\1/g,
       (_m, q) => `href=${q}${base}${q}`,
-    );
+    )
+    // Replace the WordPress theme vendor attribution ("Web Tech Craft") in
+    // the footer with our own copyright. The original markup is:
+    //   "© Copyright  <span class="dynamic-year"> </span> by Web Tech Craft"
+    // Any text between "Copyright" and "Web Tech Craft" (including span
+    // tags for the year) is stripped. Works for both the original theme
+    // `<a>`-wrapped variant and the later plain-text variant.
+    .replace(
+      /©\s*Copyright[\s\S]{0,200}?Web\s*Tech\s*Craft(?:\s*<\/a>)?/gi,
+      '© ' + new Date().getFullYear() + ' Valtoris International Trading Inc.',
+    )
+    .replace(
+      /Copyright[\s\S]{0,200}?Web\s*Tech\s*Craft(?:\s*<\/a>)?/gi,
+      String(new Date().getFullYear()) + ' Valtoris International Trading Inc.',
+    )
+    // Replace the WP theme placeholder "Boskery" inside the testimonials
+    // heading ("WHAT THEY'RE TALKING ABOUT BOSKERY") with our brand name.
+    .replace(/\b(BOSKERY|Boskery|boskery)\b/g, 'Valtoris')
+    // Original heading "RAW MEAT PRODUCTIONBY LEADING FARM" was emitted with
+    // a missing space between "PRODUCTION" and "BY". Restore it.
+    .replace(/PRODUCTIONBY/g, 'PRODUCTION BY')
+    .replace(/Productionby/g, 'Production by')
+    .replace(/productionby/g, 'production by');
 }
 
 function rewriteAssetUrls(html: string): string {
@@ -219,6 +245,22 @@ export function StaticPage({ page }: { page: PageModule }) {
     // (next route change will set its own; restore-on-cleanup just creates a
     // brief flash of stale class).
     if (page.bodyClass) document.body.className = page.bodyClass;
+
+    // Polish overrides: append our own stylesheet LAST in <head>, after every
+    // WP/Elementor link we just appended above. Source-order wins the cascade,
+    // so our responsive fixes don't need to `!important` every rule. We move
+    // (not re-create) the node on subsequent route changes so the browser
+    // keeps the already-parsed rules.
+    let polish = document.getElementById('vi-polish-overrides') as HTMLLinkElement | null;
+    if (!polish) {
+      polish = document.createElement('link');
+      polish.id = 'vi-polish-overrides';
+      polish.rel = 'stylesheet';
+      polish.href = polishCssUrl;
+    }
+    // Re-append each route change — no-op if already last child, otherwise
+    // moves to the end so newly-added WP stylesheets can't shadow our rules.
+    document.head.appendChild(polish);
   }, [page]);
 
   // Scroll to top on route change (unless there's a hash)
