@@ -78,44 +78,30 @@ body {
   padding: 0 !important;
   margin: 0 !important;
   transform: none !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
+  display: block !important;
   border-radius: 50% !important;
-  background: #03228f !important;
+  /* Navy disc + centered chevron-up SVG. Rendering the arrow as a
+     background-image directly on the button (rather than on the inner
+     span) avoids the theme's `position: absolute` on `__inner` pinning
+     the icon to the button's top-left corner. */
+  background:
+    #03228f
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 14 12 8 18 14'/></svg>")
+    no-repeat center / 18px 18px !important;
   box-shadow: 0 4px 16px rgba(3, 34, 143, 0.35);
   transition: opacity 200ms ease, visibility 200ms ease, transform 150ms ease;
 }
 
 .scroll-to-top:hover {
-  background: #c49a41 !important;
+  background-color: #c49a41 !important;
   transform: translateY(-2px) !important;
 }
 
-/* Hide the rotated "BACK TO TOP" text label entirely. */
-.scroll-to-top__text {
-  display: none !important;
-}
-
-/* The arrow indicator: style the inner span as an up-pointing chevron. */
-.scroll-to-top__wrapper {
-  position: static !important;
-  width: auto !important;
-  height: auto !important;
-  transform: none !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
+/* Hide every internal span — the chevron is drawn on the button itself. */
+.scroll-to-top__text,
+.scroll-to-top__wrapper,
 .scroll-to-top__inner {
-  width: 12px !important;
-  height: 12px !important;
-  border-top: 2px solid #fff !important;
-  border-right: 2px solid #fff !important;
-  transform: rotate(-45deg) translate(-1px, 1px) !important;
-  background: transparent !important;
-  display: block !important;
+  display: none !important;
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
